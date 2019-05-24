@@ -32,8 +32,8 @@ class BinChiMerge:
         intervals = [[ele, ele] for ele in distinct_vals]
         for i in range(1, len(distinct_vals) - 1):
             intervals[i][1] = intervals[i+1][0]
-        # 卡方阈值列表
-        chi_threshold_list = []
+        # 卡方阈值
+        chi_threshold = chi2.ppf(1 - self.significance_, 1)
         # 构建初始化 区间-分布 字典, 用于避免重复计算
         interval_distribution_dict = {}
         for interval in intervals:
@@ -61,17 +61,15 @@ class BinChiMerge:
                 c = interval_distribution_dict[str(intervals[i + 1])][0]
                 d = interval_distribution_dict[str(intervals[i + 1])][1]
                 n = a + b + c + d
-                # 获得卡方值的阈值，自由度为n-1
-                chi_threshold = chi2.ppf(1 - self.significance_, n - 1)
                 chi_threshold_list.append(chi_threshold)
                 # 计算卡方值
                 chi = n * (a * d - b * c) ** 2 / ((a + b) * (c + d) * (a + c) * (b + d))
                 chi_list.append(np.sum(chi)) 
             # 将卡方值小于临界值的合并, 否则结束分箱
+            if np.min(chi_list) > chi_threshold:
+                break
             # TODO: 一次扫描仅合并两个区间是低效的
             min_chi_index = np.argmin(chi_list)
-            if np.min(chi_list) > chi_threshold_list[min_chi_index]:
-                break
             interval_1 = intervals[min_chi_index]
             interval_2 = intervals[min_chi_index + 1]
             combined_interval = [interval_1[0], interval_2[1]]
