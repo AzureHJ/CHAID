@@ -19,6 +19,8 @@ def binary_chi_merge(data, feature, label, significance=0.05, max_intervals=1):
     intervals = [[ele, ele] for ele in distinct_vals]
     for i in range(1, len(distinct_vals) - 1):
         intervals[i][1] = intervals[i+1][0]
+    # 排序
+    data = data.sort_values(by=feature).reset_index(drop=True)
     # 构建初始化 区间-分布 字典, 用于避免重复计算
     interval_distribution_dict = {}
     for interval in intervals:
