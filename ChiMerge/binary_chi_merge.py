@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-def binary_chi_merge(data, feature, label, significance=0.05, max_intervals=1):
+def binary_chi_merge(data, feature, label, significance=0.05, max_intervals=1, inplace=False):
     """
     二分类问题的简化版本，仅支持label为0和1的情况。
     经过计算优化，可读性低
@@ -50,6 +50,7 @@ def binary_chi_merge(data, feature, label, significance=0.05, max_intervals=1):
             # 处理0的情况
             chi_list.append(np.sum(chi)) 
         # 将卡方值小于临界值的合并, 否则结束分箱
+        # TODO: 一次扫描仅合并两个区间是低效的
         if np.min(chi_list) > chi_threshold:
             break
         min_chi_index = np.argmin(chi_list)
@@ -62,8 +63,19 @@ def binary_chi_merge(data, feature, label, significance=0.05, max_intervals=1):
         del interval_distribution_dict[str(interval_2)]
         interval_distribution_dict[str(combined_interval)] = combined_distribution
         intervals.insert(min_chi_index, combined_interval)
-
+    
     return intervals
+
+def discretization(data, feature, mapping_intervals, inplace=False):
+    if not inplace:
+        data = data.copy()
+    mapping_dict = {str(interval): \
+                    data[data[feature].between(interval[0], interval[1])].index.values \
+                    for interval in mapping_intervals}
+    for mapping_string, mapping_index in mapping_dict.items():
+        data.loc[mapping_index, feature] = mapping_string
+    if not inplace:
+        return data
 
 def map_function(x): 
     x = str(x) 
