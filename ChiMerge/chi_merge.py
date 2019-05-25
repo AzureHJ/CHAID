@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
-from collections import Counter
+
+class ChiMerge:
+    def __init__(self):
+        pass
 
 def chi_merge(data, feature, label, max_intervals):
     # 排序

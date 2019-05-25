@@ -10,6 +10,7 @@ class BinChiMerge:
         self.significance_ = significance
         self.max_intervals_ = max_intervals
         self.intervals_ = None
+        self.mapping_dict_ = None
 
     def fit(self, data, feature, label):
         self.intervals_ = self._fit(data, feature, label)
@@ -19,7 +20,9 @@ class BinChiMerge:
         if self.intervals_ is None:
             return None
         else:
-            return self._transform(data, feature, self.intervals_, inplace)
+            mapping_dict, data = self._transform(data, feature, self.intervals_, inplace)
+            self.mapping_dict_ = mapping_dict
+            return data
 
     def _fit(self, data, feature, label):
         assert data[label].drop_duplicates().shape[0] == 2 \
@@ -43,7 +46,6 @@ class BinChiMerge:
             interval_distribution_dict[str(interval)] = np.array([zeros_count, ones_count])
         while len(intervals) > self.max_intervals_: 
             chi_list = []
-            chi_threshold_list = []
             # 计算每两个区间之间的卡方值
             for i in range(len(intervals)-1):
                 """
@@ -61,7 +63,6 @@ class BinChiMerge:
                 c = interval_distribution_dict[str(intervals[i + 1])][0]
                 d = interval_distribution_dict[str(intervals[i + 1])][1]
                 n = a + b + c + d
-                chi_threshold_list.append(chi_threshold)
                 # 计算卡方值
                 chi = n * (a * d - b * c) ** 2 / ((a + b) * (c + d) * (a + c) * (b + d))
                 chi_list.append(np.sum(chi)) 
@@ -85,12 +86,16 @@ class BinChiMerge:
     def _transform(self, data, feature, intervals, inplace=False):
         if not inplace:
             data = data.copy()
-        mapping_dict = {str(interval): \
-                    data[data[feature].between(interval[0], interval[1])].index.values \
-                    for interval in intervals}
-        for mapping_string, mapping_index in mapping_dict.items():
-            data.loc[mapping_index, feature] = mapping_string
-        return data
+        # 保存区间编号和具体区间的映射关系
+        mapping_dict = {}
+        # 用于转换数据
+        transforming_dict = {}
+        for i in range(len(intervals)):
+            mapping_dict[i] = intervals[i]
+            transforming_dict[i] = data[data[feature].between(intervals[i][0], intervals[i][1])].index.values
+        for transformed_label, index in transforming_dict.items():
+            data.loc[index, feature] = transformed_label
+        return mapping_dict, data
 
     def fit_transform(self, data, feature, label, inplace=False):
         return self._transform(data, feature, self._fit(data, feature, label), inplace)
